@@ -1,0 +1,16 @@
+#frequency: 100.0
+frequency: 15.0
+frame_id: "ce30c"
+#frame_id: "astrobot_front_rgbd_camera_link"
+scan_topic: "/astrobot/front_laser/scan"
+publish_markers: true
+bearing_std_dev: 1e-5
+range_std_dev: 0.012
+least_sq_angle_thresh: 0.01
+least_sq_radius_thresh: 0.01
+max_line_gap: 0.5
+min_line_length: 0.01
+min_range: 0.5
+min_split_dist: 0.5
+outlier_dist: 0.5
+min_line_points: 20
