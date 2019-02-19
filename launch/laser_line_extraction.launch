@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="sim" default="false"/>
+  <node name="line_extractor" pkg="laser_line_extraction" type="line_extraction_node">
+    <rosparam if = "$(arg sim)" file="$(find laser_line_extraction)/config/laser_line_extraction_sim.yaml" command="load"/>
+    <rosparam unless = "$(arg sim)" file="$(find laser_line_extraction)/config/laser_line_extraction.yaml" command="load"/>
+  </node>
+</launch>
+
