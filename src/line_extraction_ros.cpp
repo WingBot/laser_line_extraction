@@ -2,17 +2,15 @@
 #include <cmath>
 #include <ros/console.h>
 
-
 namespace line_extraction
 {
 
 ///////////////////////////////////////////////////////////////////////////////
 // Constructor / destructor
 ///////////////////////////////////////////////////////////////////////////////
-LineExtractionROS::LineExtractionROS(ros::NodeHandle& nh, ros::NodeHandle& nh_local):
-  nh_(nh),
-  nh_local_(nh_local),
-  data_cached_(false)
+LineExtractionROS::LineExtractionROS(ros::NodeHandle &nh, ros::NodeHandle &nh_local) : nh_(nh),
+                                                                                       nh_local_(nh_local),
+                                                                                       data_cached_(false)
 {
   loadParameters();
   line_publisher_ = nh_.advertise<laser_line_extraction::LineSegmentList>("line_segments", 1);
@@ -21,6 +19,7 @@ LineExtractionROS::LineExtractionROS(ros::NodeHandle& nh, ros::NodeHandle& nh_lo
   {
     marker_publisher_ = nh_.advertise<visualization_msgs::Marker>("line_markers", 1);
   }
+  enable_service_ = nh_.advertiseService("enable", &LineExtractionROS::serviceEnableCallback, this);
 }
 
 LineExtractionROS::~LineExtractionROS()
@@ -32,23 +31,26 @@ LineExtractionROS::~LineExtractionROS()
 ///////////////////////////////////////////////////////////////////////////////
 void LineExtractionROS::run()
 {
-  // Extract the lines
-  std::vector<Line> lines;
-  line_extraction_.extractLines(lines);
-
-  // Populate message
-  laser_line_extraction::LineSegmentList msg;
-  populateLineSegListMsg(lines, msg);
-  
-  // Publish the lines
-  line_publisher_.publish(msg);
-
-  // Also publish markers if parameter publish_markers is set to true
-  if (pub_markers_)
+  if (enabled_)
   {
-    visualization_msgs::Marker marker_msg;
-    populateMarkerMsg(lines, marker_msg);
-    marker_publisher_.publish(marker_msg);
+    // Extract the lines
+    std::vector<Line> lines;
+    line_extraction_.extractLines(lines);
+
+    // Populate message
+    laser_line_extraction::LineSegmentList msg;
+    populateLineSegListMsg(lines, msg);
+
+    // Publish the lines
+    line_publisher_.publish(msg);
+
+    // Also publish markers if parameter publish_markers is set to true
+    if (pub_markers_)
+    {
+      visualization_msgs::Marker marker_msg;
+      populateMarkerMsg(lines, marker_msg);
+      marker_publisher_.publish(marker_msg);
+    }
   }
 }
 
@@ -57,12 +59,12 @@ void LineExtractionROS::run()
 ///////////////////////////////////////////////////////////////////////////////
 void LineExtractionROS::loadParameters()
 {
-  
+
   ROS_DEBUG("*************************************");
   ROS_DEBUG("PARAMETERS:");
 
   // Parameters used by this node
-  
+
   std::string frame_id, scan_topic;
   bool pub_markers;
 
@@ -81,7 +83,7 @@ void LineExtractionROS::loadParameters()
   // Parameters used by the line extraction algorithm
 
   double bearing_std_dev, range_std_dev, least_sq_angle_thresh, least_sq_radius_thresh,
-         max_line_gap, min_line_length, min_range, min_split_dist, outlier_dist;
+      max_line_gap, min_line_length, min_range, min_split_dist, outlier_dist;
   int min_line_points;
 
   nh_local_.param<double>("bearing_std_dev", bearing_std_dev, 1e-3);
@@ -95,7 +97,7 @@ void LineExtractionROS::loadParameters()
   nh_local_.param<double>("least_sq_angle_thresh", least_sq_angle_thresh, 1e-4);
   line_extraction_.setLeastSqAngleThresh(least_sq_angle_thresh);
   ROS_DEBUG("least_sq_angle_thresh: %f", least_sq_angle_thresh);
-  
+
   nh_local_.param<double>("least_sq_radius_thresh", least_sq_radius_thresh, 1e-4);
   line_extraction_.setLeastSqRadiusThresh(least_sq_radius_thresh);
   ROS_DEBUG("least_sq_radius_thresh: %f", least_sq_radius_thresh);
@@ -131,24 +133,24 @@ void LineExtractionROS::loadParameters()
 // Populate messages
 ///////////////////////////////////////////////////////////////////////////////
 void LineExtractionROS::populateLineSegListMsg(const std::vector<Line> &lines,
-                                                laser_line_extraction::LineSegmentList &line_list_msg)
+                                               laser_line_extraction::LineSegmentList &line_list_msg)
 {
   for (std::vector<Line>::const_iterator cit = lines.begin(); cit != lines.end(); ++cit)
   {
     laser_line_extraction::LineSegment line_msg;
-    line_msg.angle = cit->getAngle(); 
-    line_msg.radius = cit->getRadius(); 
-    line_msg.covariance = cit->getCovariance(); 
-    line_msg.start = cit->getStart(); 
-    line_msg.end = cit->getEnd(); 
+    line_msg.angle = cit->getAngle();
+    line_msg.radius = cit->getRadius();
+    line_msg.covariance = cit->getCovariance();
+    line_msg.start = cit->getStart();
+    line_msg.end = cit->getEnd();
     line_list_msg.line_segments.push_back(line_msg);
   }
   line_list_msg.header.frame_id = frame_id_;
   line_list_msg.header.stamp = ros::Time::now();
 }
 
-void LineExtractionROS::populateMarkerMsg(const std::vector<Line> &lines, 
-                                           visualization_msgs::Marker &marker_msg)
+void LineExtractionROS::populateMarkerMsg(const std::vector<Line> &lines,
+                                          visualization_msgs::Marker &marker_msg)
 {
   marker_msg.ns = "line_extraction";
   marker_msg.id = 0;
@@ -204,7 +206,7 @@ void LineExtractionROS::laserScanCallback(const sensor_msgs::LaserScan::ConstPtr
 {
   if (!data_cached_)
   {
-    cacheData(scan_msg); 
+    cacheData(scan_msg);
     data_cached_ = true;
   }
 
@@ -212,5 +214,14 @@ void LineExtractionROS::laserScanCallback(const sensor_msgs::LaserScan::ConstPtr
   line_extraction_.setRangeData(scan_ranges_doubles);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Service callback to enable/disable the algorithm
+///////////////////////////////////////////////////////////////////////////////
+bool LineExtractionROS::serviceEnableCallback(std_srvs::SetBool::Request &request, std_srvs::SetBool::Response &response)
+{
+  enabled_ = request.data;
+  response.success = true;
+  response.message = "enabled/disabled";
+  return true;
+}
 } // namespace line_extraction
-
