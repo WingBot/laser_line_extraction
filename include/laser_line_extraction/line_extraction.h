@@ -19,11 +19,11 @@ public:
   LineExtraction();
   ~LineExtraction();
   // Run
-  void extractLines(std::vector<Line>&);
+  void extractLines(std::vector<Line> &);
   // Data setting
-  void setCachedData(const std::vector<double>&, const std::vector<double>&,
-                     const std::vector<double>&, const std::vector<unsigned int>&);
-  void setRangeData(const std::vector<double>&);
+  void setCachedData(const std::vector<double> &, const std::vector<double> &,
+                     const std::vector<double> &, const std::vector<unsigned int> &);
+  void setRangeData(const std::vector<double> &);
   // Parameter setting
   void setBearingVariance(double);
   void setRangeVariance(double);
@@ -46,14 +46,14 @@ private:
   // Line data
   std::vector<Line> lines_;
   // Methods
-  double chiSquared(const Eigen::Vector2d&, const Eigen::Matrix2d&,
-                    const Eigen::Matrix2d&);
+  double chiSquared(const Eigen::Vector2d &, const Eigen::Matrix2d &,
+                    const Eigen::Matrix2d &);
   double distBetweenPoints(unsigned int index_1, unsigned int index_2);
-  void   filterClosePoints();
-  void   filterOutlierPoints();
-  void   filterLines();
-  void   mergeLines();
-  void   split(const std::vector<unsigned int>&);
+  void filterClosePoints();
+  void filterOutlierPoints();
+  void filterLines();
+  void mergeLines();
+  void split(const std::vector<unsigned int> &);
 };
 
 } // namespace line_extraction
