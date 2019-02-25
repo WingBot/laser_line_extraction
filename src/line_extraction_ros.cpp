@@ -19,7 +19,7 @@ LineExtractionROS::LineExtractionROS(ros::NodeHandle &nh, ros::NodeHandle &nh_lo
   {
     marker_publisher_ = nh_.advertise<visualization_msgs::Marker>("line_markers", 1);
   }
-  enable_service_ = nh_.advertiseService("enable", &LineExtractionROS::serviceEnableCallback, this);
+  enable_service_ = nh_local.advertiseService("enable", &LineExtractionROS::serviceEnableCallback, this);
 }
 
 LineExtractionROS::~LineExtractionROS()
