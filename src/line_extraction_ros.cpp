@@ -126,6 +126,9 @@ void LineExtractionROS::loadParameters()
   line_extraction_.setMinLinePoints(static_cast<unsigned int>(min_line_points));
   ROS_DEBUG("min_line_points: %d", min_line_points);
 
+  nh_local_.param<bool>("starting_enabled", enabled_, true);
+  ROS_DEBUG("starting_enabled set to %s", enabled_ ? "true" : "false");
+
   ROS_DEBUG("*************************************");
 }
 
