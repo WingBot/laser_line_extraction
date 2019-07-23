@@ -4,13 +4,11 @@
 
 namespace line_extraction
 {
-
 ///////////////////////////////////////////////////////////////////////////////
 // Constructor / destructor
 ///////////////////////////////////////////////////////////////////////////////
-LineExtractionROS::LineExtractionROS(ros::NodeHandle &nh, ros::NodeHandle &nh_local) : nh_(nh),
-                                                                                       nh_local_(nh_local),
-                                                                                       data_cached_(false)
+LineExtractionROS::LineExtractionROS(ros::NodeHandle& nh, ros::NodeHandle& nh_local)
+  : nh_(nh), nh_local_(nh_local), data_cached_(false)
 {
   loadParameters();
   line_publisher_ = nh_.advertise<laser_line_extraction::LineSegmentList>("line_segments", 1);
@@ -20,6 +18,8 @@ LineExtractionROS::LineExtractionROS(ros::NodeHandle &nh, ros::NodeHandle &nh_lo
     marker_publisher_ = nh_.advertise<visualization_msgs::Marker>("line_markers", 1);
   }
   enable_service_ = nh_local.advertiseService("enable", &LineExtractionROS::serviceEnableCallback, this);
+
+  reconfigure_server_.setCallback(boost::bind(&LineExtractionROS::reconfigureCallback, this, _1));
 }
 
 LineExtractionROS::~LineExtractionROS()
@@ -59,7 +59,6 @@ void LineExtractionROS::run()
 ///////////////////////////////////////////////////////////////////////////////
 void LineExtractionROS::loadParameters()
 {
-
   ROS_DEBUG("*************************************");
   ROS_DEBUG("PARAMETERS:");
 
@@ -82,8 +81,8 @@ void LineExtractionROS::loadParameters()
 
   // Parameters used by the line extraction algorithm
 
-  double bearing_std_dev, range_std_dev, least_sq_angle_thresh, least_sq_radius_thresh,
-      max_line_gap, min_line_length, min_range, min_split_dist, outlier_dist;
+  double bearing_std_dev, range_std_dev, least_sq_angle_thresh, least_sq_radius_thresh, max_line_gap, min_line_length,
+      min_range, min_split_dist, outlier_dist;
   int min_line_points;
 
   nh_local_.param<double>("bearing_std_dev", bearing_std_dev, 1e-3);
@@ -132,11 +131,33 @@ void LineExtractionROS::loadParameters()
   ROS_DEBUG("*************************************");
 }
 
+////////////////////////////////////
+// callback for dynamic reconfigure
+////////////////////////////////////
+
+void LineExtractionROS::reconfigureCallback(laser_line_extraction::LaserLineExtractionConfig& config)
+{
+  boost::mutex::scoped_lock l(config_mutex_);
+  frame_id_ = config.frame_id;
+  scan_topic_ = config.scan_topic;
+  pub_markers_ = config.publish_markers;
+  line_extraction_.setBearingVariance(config.bearing_std_dev * config.bearing_std_dev);
+  line_extraction_.setRangeVariance(config.range_std_dev * config.range_std_dev);
+  line_extraction_.setLeastSqAngleThresh(config.least_sq_angle_thresh);
+  line_extraction_.setLeastSqRadiusThresh(config.least_sq_radius_thresh);
+  line_extraction_.setMaxLineGap(config.max_line_gap);
+  line_extraction_.setMinLineLength(config.min_line_length);
+  line_extraction_.setMinRange(config.min_range);
+  line_extraction_.setMinSplitDist(config.min_split_dist);
+  line_extraction_.setOutlierDist(config.outlier_dist);
+  line_extraction_.setMinLinePoints(static_cast<unsigned int>(config.min_line_points));
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Populate messages
 ///////////////////////////////////////////////////////////////////////////////
-void LineExtractionROS::populateLineSegListMsg(const std::vector<Line> &lines,
-                                               laser_line_extraction::LineSegmentList &line_list_msg)
+void LineExtractionROS::populateLineSegListMsg(const std::vector<Line>& lines,
+                                               laser_line_extraction::LineSegmentList& line_list_msg)
 {
   for (std::vector<Line>::const_iterator cit = lines.begin(); cit != lines.end(); ++cit)
   {
@@ -152,8 +173,7 @@ void LineExtractionROS::populateLineSegListMsg(const std::vector<Line> &lines,
   line_list_msg.header.stamp = ros::Time::now();
 }
 
-void LineExtractionROS::populateMarkerMsg(const std::vector<Line> &lines,
-                                          visualization_msgs::Marker &marker_msg)
+void LineExtractionROS::populateMarkerMsg(const std::vector<Line>& lines, visualization_msgs::Marker& marker_msg)
 {
   marker_msg.ns = "line_extraction";
   marker_msg.id = 0;
@@ -183,12 +203,12 @@ void LineExtractionROS::populateMarkerMsg(const std::vector<Line> &lines,
 ///////////////////////////////////////////////////////////////////////////////
 // Cache data on first LaserScan message received
 ///////////////////////////////////////////////////////////////////////////////
-void LineExtractionROS::cacheData(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
+void LineExtractionROS::cacheData(const sensor_msgs::LaserScan::ConstPtr& scan_msg)
 {
   std::vector<double> bearings, cos_bearings, sin_bearings;
   std::vector<unsigned int> indices;
-  const std::size_t num_measurements = std::ceil(
-      (scan_msg->angle_max - scan_msg->angle_min) / scan_msg->angle_increment);
+  const std::size_t num_measurements =
+      std::ceil((scan_msg->angle_max - scan_msg->angle_min) / scan_msg->angle_increment);
   for (std::size_t i = 0; i < num_measurements; ++i)
   {
     const double b = scan_msg->angle_min + i * scan_msg->angle_increment;
@@ -205,7 +225,7 @@ void LineExtractionROS::cacheData(const sensor_msgs::LaserScan::ConstPtr &scan_m
 ///////////////////////////////////////////////////////////////////////////////
 // Main LaserScan callback
 ///////////////////////////////////////////////////////////////////////////////
-void LineExtractionROS::laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &scan_msg)
+void LineExtractionROS::laserScanCallback(const sensor_msgs::LaserScan::ConstPtr& scan_msg)
 {
   if (!data_cached_)
   {
@@ -220,11 +240,12 @@ void LineExtractionROS::laserScanCallback(const sensor_msgs::LaserScan::ConstPtr
 ///////////////////////////////////////////////////////////////////////////////
 // Service callback to enable/disable the algorithm
 ///////////////////////////////////////////////////////////////////////////////
-bool LineExtractionROS::serviceEnableCallback(std_srvs::SetBool::Request &request, std_srvs::SetBool::Response &response)
+bool LineExtractionROS::serviceEnableCallback(std_srvs::SetBool::Request& request,
+                                              std_srvs::SetBool::Response& response)
 {
   enabled_ = request.data;
   response.success = true;
   response.message = "enabled/disabled";
   return true;
 }
-} // namespace line_extraction
+}  // namespace line_extraction

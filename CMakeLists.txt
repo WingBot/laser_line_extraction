@@ -9,6 +9,13 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   sensor_msgs
   visualization_msgs
+  dynamic_reconfigure
+)
+
+generate_dynamic_reconfigure_options(
+
+  cfg/LaserLineExtraction.cfg
+
 )
 
 find_package(Eigen3 REQUIRED)
@@ -41,6 +48,7 @@ target_link_libraries(line_extraction_ros line line_extraction ${catkin_LIBRARIE
 add_dependencies(line_extraction_ros laser_line_extraction_generate_messages_cpp)
 
 add_executable(line_extraction_node src/line_extraction_node.cpp)
+add_dependencies(line_extraction_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS} ${PROJECT_NAME}_gencfg)
 target_link_libraries(line_extraction_node line_extraction_ros ${catkin_LIBRARIES})
 
 include_directories(include ${catkin_INCLUDE_DIRS})

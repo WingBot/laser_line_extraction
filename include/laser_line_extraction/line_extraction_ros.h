@@ -12,6 +12,10 @@
 #include "laser_line_extraction/line_extraction.h"
 #include "laser_line_extraction/line.h"
 #include <std_srvs/SetBool.h>
+#include <laser_line_extraction/LaserLineExtractionConfig.h>
+#include <dynamic_reconfigure/server.h>
+
+
 
 namespace line_extraction
 {
@@ -49,6 +53,10 @@ private:
   void cacheData(const sensor_msgs::LaserScan::ConstPtr &);
   void laserScanCallback(const sensor_msgs::LaserScan::ConstPtr &);
   bool serviceEnableCallback(std_srvs::SetBool::Request &request, std_srvs::SetBool::Response &response);
+   //for dynamic reconfigure
+  boost::mutex config_mutex_;
+  void reconfigureCallback(laser_line_extraction::LaserLineExtractionConfig& config);
+  dynamic_reconfigure::Server<laser_line_extraction::LaserLineExtractionConfig> reconfigure_server_;
 };
 
 } // namespace line_extraction

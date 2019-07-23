@@ -8,6 +8,7 @@
 #include "laser_line_extraction/utilities.h"
 #include "laser_line_extraction/line.h"
 
+
 namespace line_extraction
 {
 
@@ -54,6 +55,7 @@ private:
   void filterLines();
   void mergeLines();
   void split(const std::vector<unsigned int> &);
+ 
 };
 
 } // namespace line_extraction
